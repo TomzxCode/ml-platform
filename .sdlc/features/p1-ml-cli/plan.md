@@ -23,8 +23,11 @@ mlx [global options] <command group> <subcommand> [arguments]
 | Global option | Effect |
 |---|---|
 | `--profile <name>` | Use a named configuration profile (FR-16) |
-| `--json` | Emit a single JSON document to stdout and nothing else (FR-12) |
-| `--verbose` | Informational logging to stderr, never stdout (NFR-3) |
+| `--workspace <name>` | Run the command against this workspace, overriding the persisted selection for this invocation only (FR-3) |
+| `--json` | Shorthand for `--output json` on any command (FR-12) |
+| `--output <format>` | Output format for list and get commands: `json`, `yaml`, `table` (default), `name` (one element name per line) |
+| `--log-level <level>` | Set logging verbosity: `debug`, `info`, `warn`, `error` (default: `warn`); logging goes to stderr, never stdout |
+| `--verbose` | Shorthand for `--log-level debug`; informational logging to stderr (NFR-3) |
 | `--version` | Print version and exit |
 | `--help` | Per-command help (NFR-1) |
 
@@ -36,23 +39,25 @@ The five operation families (FR-1) plus the cross-cutting `auth`, `workspace`, `
 
 ```
 mlx auth login|logout|status
-mlx user list|get
-mlx workspace list|select|get
-mlx workspace member list|add|remove
-mlx dataset create|list|get|delete
-mlx data copy
-mlx secret set|list|delete
+mlx auth api-key create|list|get|delete
+mlx auth service-account create|list|get|delete
+mlx batch submit|list|get|logs|cancel
+mlx completion bash|zsh|fish
 mlx compute list|get
-mlx quota list|get
-mlx volume create|list|get|delete
+mlx data copy
+mlx dataset create|list|get|delete
+mlx deploy create|list|get|update|stop
+mlx experiment create|list|get
 mlx infra cluster create|list|get|update
 mlx infra machine list|get
 mlx job submit|list|get|logs|cancel
-mlx batch submit|list|get|logs|cancel
-mlx experiment create|list|get
-mlx deploy create|list|get|update|stop
 mlx model register|list|get
-mlx completion bash|zsh|fish
+mlx quota create|list|get|delete
+mlx secret set|list|delete
+mlx user list|get
+mlx volume create|list|get|delete
+mlx workspace create|list|get|delete
+mlx workspace member list|add|remove
 ```
 
 ### Command reference
@@ -61,131 +66,41 @@ Grouped by command hierarchy.
 
 #### `mlx auth` (FR-2)
 
+Interactive human authentication and machine identities, grouped as the authentication surface.
+
 | Subcommand | Arguments | Notes |
 |---|---|---|
 | `login` | `[--token] [--server <url>]` | Prompts when interactive; validates against the API server |
 | `logout` | | Clears stored credentials |
 | `status` | | Shows current identity, server, and profile |
 
-#### `mlx user` (FR-23)
+#### `mlx auth api-key` (FR-26)
 
 | Subcommand | Arguments | Notes |
 |---|---|---|
-| `list` | | Users visible to the caller, with team membership |
-| `get <id-or-email>` | | One user's details (identity, teams, workspaces) |
+| `create <name>` | `[--expires <duration>]` | Creates an API key for the calling user (CI and automation); the key value is printed once, never again |
+| `delete <name>` | | Revokes the key immediately |
+| `get <name>` | | One key's metadata (never the value) |
+| `list` | | Keys with name, creation date, expiry, last used |
 
-#### `mlx workspace` (FR-3, FR-24)
-
-| Subcommand | Arguments | Notes |
-|---|---|---|
-| `list` | | Lists workspaces the user can access |
-| `select <name>` | | Persists the selection in the active profile |
-| `get` | | Prints the active workspace |
-| `member list` | | Members of the active workspace with roles |
-| `member add <user>` | `[--role <role>]` | Adds a user to the active workspace (default role: member) |
-| `member remove <user>` | | Removes a user from the active workspace |
-
-#### `mlx dataset` (FR-20)
+#### `mlx auth service-account` (FR-27)
 
 | Subcommand | Arguments | Notes |
 |---|---|---|
-| `create` | `<spec-file>` | Registers a dataset in the catalog from a spec (location, format, description); validates locally first |
-| `list` | | Lists datasets in the workspace |
-| `get <name>` | | One dataset's details (location, format, version) |
-| `delete <name>` | | Removes a dataset from the catalog |
-
-#### `mlx data` (FR-5, FR-13)
-
-| Subcommand | Arguments | Notes |
-|---|---|---|
-| `copy` | `<source> <destination> [--resume]` | Copies a dataset; `--resume` continues an interrupted copy |
-
-#### `mlx secret` (FR-17)
-
-| Subcommand | Arguments | Notes |
-|---|---|---|
-| `set <name>` | `--from-literal <value> \| --from-file <path>` | Stores a credential in the workspace for jobs to reference |
-| `list` | | Lists secret names only, never values (NFR-3) |
-| `delete <name>` | | Removes a secret from the workspace |
-
-#### `mlx compute` (FR-18)
-
-| Subcommand | Arguments | Notes |
-|---|---|---|
-| `list` | | Machine types available to the workspace |
-| `get <type>` | | One machine type's details (GPUs, memory); quota limits live in `quota get` |
-
-#### `mlx quota` (FR-21)
-
-| Subcommand | Arguments | Notes |
-|---|---|---|
-| `list` | | Quotas for the workspace or team (compute, GPU, storage), with used vs. total |
-| `get <resource>` | | One resource's quota details and current utilization |
-
-#### `mlx volume` (FR-25)
-
-| Subcommand | Arguments | Notes |
-|---|---|---|
-| `create` | `<name> --size <size> [--storage-class <class>] [--cluster <name>]` | Provisions a persistent volume for workspace storage (e.g., dataset staging, checkpoints) |
-| `list` | | Volumes in the workspace with size and state |
-| `get <name>` | | One volume's details (size, storage class, cluster, mount point, state) |
-| `delete <name>` | | Releases the volume; data is not recoverable |
-
-#### `mlx infra` (FR-22)
-
-| Subcommand | Arguments | Notes |
-|---|---|---|
-| `list` | | Clusters available to the platform, with region and health |
-| `get <name>` | | One cluster's details (version, capacity, capabilities) |
-| `update <name>` | `[--add-machine-type <type>] [--remove-machine-type <type>] [--autoscaler-max <n>]` | Modifies a cluster's machine type offerings and autoscaling ceiling |
-| `machine list` | `[--cluster <name>]` | Machines across clusters (or one cluster) with state and allocation |
-| `machine get <id>` | | One machine's details (type, cluster, state, allocation, health) |
-
-#### `mlx job` (FR-4, FR-6, FR-8, FR-11, FR-14)
-
-| Subcommand | Arguments | Notes |
-|---|---|---|
-| `submit` | `<spec-file>` | Submits a job whose type (data processing, training, or batch inference) is declared by the spec; validates locally first; returns a job id |
-| `list` | `[--type <type>] [--state <state>]` | All jobs with id, type, state |
-| `get <id>` | | One job's current state |
-| `logs <id>` | `[--follow]` | Streams logs; `--follow` keeps the stream open |
-| `cancel <id>` | | Requests cancellation |
+| `create <name>` | | Creates a service account identity in the workspace for non-human access |
+| `delete <name>` | | Removes the service account and revokes its credentials |
+| `get <name>` | | One service account's details (bindings, keys) |
+| `list` | | Service accounts with creation date and last used |
 
 #### `mlx batch` (FR-8, FR-11, FR-14)
 
 | Subcommand | Arguments | Notes |
 |---|---|---|
-| `submit` | `<spec-file>` | Submits a batch inference job; equivalent to `job submit` with a batch inference spec; validates locally first; returns a job id |
-| `list` | `[--state <state>]` | Batch inference jobs only; same output as `job list --type batch-inference` |
-| `get <id>` | | One batch job's current state |
-| `logs <id>` | `[--follow]` | Streams a batch job's logs |
 | `cancel <id>` | | Cancels a batch job |
-
-#### `mlx experiment` (FR-19)
-
-| Subcommand | Arguments | Notes |
-|---|---|---|
-| `create` | `<spec-file>` | Creates an experiment in the workspace (name, description); training runs attach to it by name |
-| `list` | | Lists experiments in the workspace |
-| `get <name>` | | One experiment's runs and their metrics |
-
-#### `mlx deploy` (FR-9, FR-10)
-
-| Subcommand | Arguments | Notes |
-|---|---|---|
-| `create` | `<model>:<version> [--endpoint-name <name>] [--replicas <n>] [--min-replicas <n>] [--max-replicas <n>]` | Deploys for online inference; prints the endpoint reference; `--replicas` fixes a static count, min/max set autoscaling bounds |
-| `list` | | Lists deployments with state |
-| `get <name>` | | Inspects one deployment |
-| `update <name>` | `[--model <model>:<version>] [--replicas <n>] [--min-replicas <n>] [--max-replicas <n>]` | Updates the served model version, a static replica count, and/or the autoscaling bounds (min/max scale) of the deployment |
-| `stop <name>` | | Stops the deployment |
-
-#### `mlx model` (FR-7)
-
-| Subcommand | Arguments | Notes |
-|---|---|---|
-| `register` | `<artifact-path> --name <name> [--version <v>]` | Registers an externally trained model artifact in the registry so it can be deployed or used for batch inference |
-| `list` | | Lists registered models |
-| `get <name>` | | Versions and artifact locations |
+| `get <id>` | | One batch job's current state |
+| `list` | `[--state <state>]` | Batch inference jobs only; same output as `job list --type batch-inference` |
+| `logs <id>` | `[--follow]` | Streams a batch job's logs |
+| `submit` | `<spec-file>` | Submits a batch inference job; equivalent to `job submit` with a batch inference spec; validates locally first; returns a job id |
 
 #### `mlx completion` (FR-15)
 
@@ -193,10 +108,126 @@ Grouped by command hierarchy.
 |---|---|---|
 | `<shell>` | | Emits a shell completion script (bash, zsh, fish) |
 
+#### `mlx compute` (FR-18)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `get <type>` | | One machine type's details (GPUs, memory); quota limits live in `quota get` |
+| `list` | | Machine types available to the workspace |
+
+#### `mlx data` (FR-5, FR-13)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `copy` | `<source> <destination> [--resume]` | Copies a dataset; `--resume` continues an interrupted copy |
+
+#### `mlx dataset` (FR-20)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `create` | `<spec-file>` | Registers a dataset in the catalog from a spec (location, format, description); validates locally first |
+| `delete <name>` | | Removes a dataset from the catalog |
+| `get <name>` | | One dataset's details (location, format, version) |
+| `list` | | Lists datasets in the workspace |
+
+#### `mlx deploy` (FR-9, FR-10)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `create` | `<model>:<version> [--endpoint-name <name>] [--replicas <n>] [--min-replicas <n>] [--max-replicas <n>]` | Deploys for online inference; prints the endpoint reference; `--replicas` fixes a static count, min/max set autoscaling bounds |
+| `get <name>` | | Inspects one deployment |
+| `list` | | Lists deployments with state |
+| `stop <name>` | | Stops the deployment |
+| `update <name>` | `[--model <model>:<version>] [--replicas <n>] [--min-replicas <n>] [--max-replicas <n>]` | Updates the served model version, a static replica count, and/or the autoscaling bounds (min/max scale) of the deployment |
+
+#### `mlx experiment` (FR-19)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `create` | `<spec-file>` | Creates an experiment in the workspace (name, description); training runs attach to it by name |
+| `get <name>` | | One experiment's runs and their metrics |
+| `list` | | Lists experiments in the workspace |
+
+#### `mlx infra` (FR-22)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `cluster create` | `<spec-file>` | Provisions a cluster from a spec (cloud, region, machine types, size); asynchronous: returns once the cluster is registered, provisioning continues server-side |
+| `cluster get <name>` | | One cluster's details (version, capacity, capabilities) |
+| `cluster list` | | Clusters available to the platform, with region and health |
+| `cluster update <name>` | `[--add-machine-type <type>] [--remove-machine-type <type>] [--autoscaler-max <n>]` | Modifies a cluster's machine type offerings and autoscaling ceiling |
+| `machine get <id>` | | One machine's details (type, cluster, state, allocation, health) |
+| `machine list` | `[--cluster <name>]` | Machines across clusters (or one cluster) with state and allocation |
+
+#### `mlx job` (FR-4, FR-6, FR-8, FR-11, FR-14)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `cancel <id>` | | Requests cancellation |
+| `get <id>` | | One job's current state |
+| `list` | `[--type <type>] [--state <state>]` | All jobs with id, type, state |
+| `logs <id>` | `[--follow]` | Streams logs; `--follow` keeps the stream open |
+| `submit` | `<spec-file>` | Submits a job whose type (data processing, training, or batch inference) is declared by the spec; validates locally first; returns a job id |
+
+#### `mlx model` (FR-7)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `get <name>` | | Versions and artifact locations |
+| `list` | | Lists registered models |
+| `register` | `<artifact-path> --name <name> [--version <v>]` | Registers an externally trained model artifact in the registry so it can be deployed or used for batch inference |
+
+#### `mlx quota` (FR-21)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `create <scope>` | `--resource <resource> --limit <amount>` | Sets a quota for a scope (workspace or team), e.g., `mlx quota create workspace/foo --resource gpu --limit 8` |
+| `delete <scope>` | `--resource <resource>` | Removes the quota for a resource in a scope; usage falls back to platform defaults |
+| `get <resource>` | `[--scope <scope>]` | One resource's quota details and current utilization |
+| `list` | `[--scope <scope>]` | Quotas with used vs. total, optionally filtered to a scope |
+
+#### `mlx secret` (FR-17)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `delete <name>` | | Removes a secret from the workspace |
+| `list` | | Lists secret names only, never values (NFR-3) |
+| `set <name>` | `--from-literal <value> \| --from-file <path>` | Stores a credential in the workspace for jobs to reference |
+
+#### `mlx user` (FR-23)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `get <id-or-email>` | | One user's details (identity, teams, workspaces) |
+| `list` | | Users visible to the caller, with team membership |
+
+#### `mlx volume` (FR-25)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `create` | `<name> --size <size> [--storage-class <class>] [--cluster <name>]` | Provisions a persistent volume for workspace storage (e.g., dataset staging, checkpoints) |
+| `delete <name>` | | Releases the volume; data is not recoverable |
+| `get <name>` | | One volume's details (size, storage class, cluster, mount point, state) |
+| `list` | | Volumes in the workspace with size and state |
+
+#### `mlx workspace` (FR-3, FR-24)
+
+| Subcommand | Arguments | Notes |
+|---|---|---|
+| `create` | `<name>` | Creates a workspace; the creator becomes its first admin |
+| `delete <name>` | `[--force]` | Deletes a workspace; refuses when it still contains resources unless `--force` |
+| `get` | | Prints the active workspace |
+| `list` | | Lists workspaces the user can access |
+| `member add <user>` | `[--role <role>]` | Adds a user to the active workspace (default role: member) |
+| `member list` | | Members of the active workspace with roles |
+| `member remove <user>` | | Removes a user from the active workspace |
+| `select <name>` | | Persists the selection in the active profile |
+
 ### Output conventions
 
 - Human mode: tables or key-value blocks; progress to stderr.
-- JSON mode (`--json`): one valid JSON document on stdout, nothing else (FR-12).
+- Machine mode (`--output <format>`): every list command supports `json`, `yaml`, `table` (default), and `name` (plaintext, one element name per line, for shell piping).
+- `--json` remains available as shorthand for `--output json` on any command (FR-12); with `--output json` the document is a single valid JSON value on stdout, nothing else.
 - Errors: message, likely cause, suggested fix, one per line (NFR-1).
 
 ## Phases
@@ -223,8 +254,10 @@ Grouped by command hierarchy.
 **Deliverables:**
 - [ ] `auth login/logout/status` with token storage and expiry handling (FR-2)
 - [ ] API client with retry and backoff; clear unreachable-server error (NFR-2)
-- [ ] Workspace select/get/list scoping all requests (FR-3)
+- [ ] Workspace create/select/get/list/delete scoping all requests (FR-3)
 - [ ] `user list/get` (FR-23)
+- [ ] `auth api-key create/list/get/delete` with value shown once on create (FR-26)
+- [ ] `auth service-account create/list/get/delete` (FR-27)
 - [ ] `workspace member list/add/remove` (FR-24)
 - [ ] `--json` output mode plumbed through every command (FR-12)
 - [ ] Contract-conformant stub server used by tests (validates assumption 1)
@@ -241,7 +274,7 @@ Grouped by command hierarchy.
 - [ ] `experiment create/list/get` showing runs and metrics (FR-19)
 - [ ] `secret set/list/delete`, values never printed (FR-17, NFR-3)
 - [ ] `compute list/get` (FR-18)
-- [ ] `quota list/get` (FR-21)
+- [ ] `quota create/list/get/delete` (FR-21)
 - [ ] `volume create/list/get/delete` (FR-25)
 - [ ] `infra cluster create/list/get/update` and `infra machine list/get` (FR-22)
 - [ ] `dataset create/list/get/delete` (FR-20)

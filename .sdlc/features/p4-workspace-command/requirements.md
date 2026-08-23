@@ -101,8 +101,9 @@ Order criteria by FRs first (sorted by ID), then NFRs (sorted by ID).
     ```gherkin
     @FR-2
     Scenario: malformed workspace name
-      Given the user runs workspace select with a name that is not kebab-case
-      Then the CLI exits 1 with a usage error naming the expected form
+      Given the user invokes workspace select with the name "Research Dev"
+      When the CLI validates the argument locally
+      Then the CLI exits 1 with a usage error naming the expected kebab-case form
     ```
 
 - [ ] **FR-3**
@@ -219,3 +220,5 @@ None identified yet.
 
 1. Should a default workspace be auto-selected when the user belongs to exactly one?
 2. What exit code does `workspace get` use when no workspace is selected, and how does JSON mode represent "none selected"?
+
+Resolutions (2026-08-23): `workspace get` with no selection exits 0 with a clear human-readable statement, and JSON mode prints `null` (`cli-design.md`, Exit Codes and Output Behavior).

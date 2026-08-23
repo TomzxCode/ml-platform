@@ -1,0 +1,87 @@
+site_name: ml-platform
+site_description: "A unified interface for machine learning at commercial scale: data processing, data transfer, training, batch inference, and online inference through the mlx CLI."
+repo_url: https://github.com/example/ml-platform
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.follow
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - toc:
+      permalink: true
+
+nav:
+  - What is ml-platform?: index.md
+  - Getting started:
+      - Installation: installation.md
+      - Quickstart: quickstart.md
+  - Concepts:
+      - Overview: concepts/index.md
+      - Workspaces: concepts/workspaces.md
+      - Datasets: concepts/datasets.md
+      - Jobs: concepts/jobs.md
+      - Experiments: concepts/experiments.md
+      - Models: concepts/models.md
+      - Deployments: concepts/deployments.md
+      - Compute and quotas: concepts/compute.md
+      - Volumes: concepts/volumes.md
+      - Secrets: concepts/secrets.md
+      - Data transfers: concepts/transfers.md
+      - Clusters and machines: concepts/clusters.md
+      - Users and identities: concepts/identities.md
+  - Guides:
+      - Overview: guides/index.md
+      - CLI conventions: guides/cli-conventions.md
+      - Train a model: guides/train-a-model.md
+      - Score a dataset: guides/score-a-dataset.md
+      - Deploy a model: guides/deploy-a-model.md
+      - Move data: guides/move-data.md
+      - Automation: guides/automation.md
+      - Troubleshooting: guides/troubleshooting.md
+  - Reference:
+      - Overview: reference/index.md
+      - CLI:
+          - Command tree: reference/cli/index.md
+          - auth: reference/cli/auth.md
+          - batch: reference/cli/batch.md
+          - completion: reference/cli/completion.md
+          - compute: reference/cli/compute.md
+          - data: reference/cli/data.md
+          - dataset: reference/cli/dataset.md
+          - deploy: reference/cli/deploy.md
+          - experiment: reference/cli/experiment.md
+          - infra: reference/cli/infra.md
+          - job: reference/cli/job.md
+          - model: reference/cli/model.md
+          - quota: reference/cli/quota.md
+          - secret: reference/cli/secret.md
+          - user: reference/cli/user.md
+          - volume: reference/cli/volume.md
+          - workspace: reference/cli/workspace.md
+      - Specs:
+          - Overview: reference/specs/index.md
+          - Job spec: reference/specs/job.md
+          - Dataset spec: reference/specs/dataset.md
+          - Experiment spec: reference/specs/experiment.md
+          - Cluster spec: reference/specs/cluster.md

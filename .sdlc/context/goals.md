@@ -45,7 +45,10 @@ MLEs accomplish all typical ML operations through the platform's CLI alone, with
 
 | Feature | Advances objective | Contribution |
 |---|---|---|
-| (none yet) | | |
+| FEAT-p1 (Unified ML CLI) | Simplified user experience doing typical ML operations | Delivers the unified command surface through which every typical ML operation is accomplished (KR-1) |
+| FEAT-p2 (API Server) | Simplified user experience doing typical ML operations | Executes every CLI operation end to end (contract, persistence, dispatch), making the unified surface functional (KR-1) |
+
+FEAT-p3 to FEAT-p14 are children of FEAT-p1, one per CLI command group, and advance the objective through their parent.
 
 ## Review Cadence
 
@@ -55,4 +58,4 @@ MLEs accomplish all typical ML operations through the platform's CLI alone, with
 
 ## Open Questions
 
-- Onboarding time has no instrumentation yet; define the measurement method when telemetry exists (see `/create-telemetry` on the first feature).
+- Onboarding-time instrumentation: the measurement method is now defined by the per-feature telemetry plans (FEAT-p3, p8, p9, p10) as a funnel from `cli_first_run` through `auth_login_succeeded` to the first successful operation; it lands when those features are implemented.

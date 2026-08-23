@@ -27,7 +27,7 @@ Order rows by priority: Must first, then Should, then May.
 |---|---|---|
 | FR-1 | Must | The CLI shall expose commands covering every operation family: data processing, data transfer, training, batch inference, and online inference |
 | FR-2 | Must | The CLI shall authenticate the user against the API server using a token before executing any operation |
-| FR-3 | Must | The CLI shall let the user select a workspace and scope all subsequent operations to it |
+| FR-3 | Must | The CLI shall let the user create, delete, select, and inspect workspaces, and scope all subsequent operations to the selected workspace |
 | FR-4 | Must | The CLI shall submit data processing jobs defined by a user-supplied processing spec |
 | FR-5 | Must | The CLI shall copy a dataset from a source location to a destination location on request |
 | FR-6 | Must | The CLI shall submit training jobs defined by a user-supplied training spec (code, dataset reference, compute) |
@@ -37,6 +37,7 @@ Order rows by priority: Must first, then Should, then May.
 | FR-10 | Must | The CLI shall manage online inference deployments (list, inspect, update served model, static replica count and autoscaling bounds, stop) |
 | FR-11 | Must | The CLI shall report job state for every submitted job (list jobs, inspect one job, stream its logs) |
 | FR-12 | Should | The CLI shall emit machine-readable output (JSON) for every command when requested |
+| FR-28 | Should | All list commands shall support output formats: `json`, `yaml`, `table` (default), and `name` (one element name per line for shell piping) |
 | FR-13 | Should | The CLI shall show transfer progress and resume an interrupted data copy |
 | FR-14 | Should | The CLI shall cancel a submitted job on request |
 | FR-15 | May | The CLI shall provide shell completion for supported shells |
@@ -45,11 +46,13 @@ Order rows by priority: Must first, then Should, then May.
 | FR-18 | Should | The CLI shall list available compute types and inspect one type's resources and quota |
 | FR-19 | Must | The CLI shall create experiments, list experiments in the workspace, and inspect one experiment's runs and their metrics |
 | FR-20 | Must | The CLI shall manage dataset catalog entries (create from spec, list, inspect, delete) |
-| FR-21 | Should | The CLI shall list resource quotas (compute, GPU, storage) with current utilization, and inspect one resource's quota |
+| FR-21 | Should | The CLI shall manage resource quotas per scope (set a limit, list with utilization, inspect one resource, delete) |
 | FR-22 | Should | The CLI shall create clusters from a spec, list clusters and their details, modify a cluster's configuration, and list machines across clusters with state and allocation |
 | FR-23 | Should | The CLI shall list users with their team memberships and inspect one user's details |
 | FR-24 | Should | The CLI shall manage workspace membership (list members with roles, add a member, remove a member) |
 | FR-25 | Should | The CLI shall manage persistent volumes in the workspace (create, list, inspect, delete) |
+| FR-26 | Must | The CLI shall manage API keys for the calling user (create with optional expiry, list, inspect, revoke), with the key value displayed only once at creation |
+| FR-27 | Must | The CLI shall manage workspace service accounts for non-human access (create, list, inspect, delete with credential revocation) |
 
 ## Non-Functional Requirements
 
@@ -124,6 +127,22 @@ Order criteria by FRs first (sorted by ID), then NFRs (sorted by ID).
       Given the user is authenticated and belongs to a team with two workspaces
       When the user selects workspace A and submits a training job
       Then the job is created in workspace A only
+    ```
+
+    ```gherkin
+    @FR-3
+    Scenario: create and delete a workspace
+      Given the user is authenticated
+      When the user creates a workspace and selects it
+      Then the workspace appears in the workspace list and the user is its admin
+    ```
+
+    ```gherkin
+    @FR-3
+    Scenario: delete a non-empty workspace is refused
+      Given the active workspace contains a dataset
+      When the user deletes the workspace without --force
+      Then the CLI exits non-zero naming the contained resources and the workspace remains
     ```
 
 - [ ] **FR-4**
@@ -380,6 +399,14 @@ Order criteria by FRs first (sorted by ID), then NFRs (sorted by ID).
 
     ```gherkin
     @FR-21
+    Scenario: manage quotas
+      Given the caller has admin permission on a workspace
+      When the user sets a GPU quota for the workspace, lists quotas, inspects the GPU resource, and deletes the quota
+      Then the listing and inspection reflect the set limit and utilization, and deletion removes the limit
+    ```
+
+    ```gherkin
+    @FR-21
     Scenario: inspect quotas
       Given the workspace has compute, GPU, and storage quotas with some utilization
       When the user lists quotas and gets one resource
@@ -456,6 +483,36 @@ Order criteria by FRs first (sorted by ID), then NFRs (sorted by ID).
       Given the workspace's storage quota is exhausted
       When the user attempts to create a volume
       Then the CLI exits non-zero with a quota error naming the exhausted resource
+    ```
+
+- [ ] **FR-26**
+
+    ```gherkin
+    @FR-26
+    Scenario: manage API keys
+      Given the user is authenticated
+      When the user creates an API key with a one-month expiry, lists keys, inspects it, and revokes it
+      Then the key value is printed exactly once at creation, listings show metadata without the value, and requests with the revoked key fail authentication
+    ```
+
+- [ ] **FR-27**
+
+    ```gherkin
+    @FR-27
+    Scenario: manage service accounts
+      Given the caller is an admin of the active workspace
+      When the user creates a service account, lists them, inspects it, and deletes it
+      Then the service account appears with its key bindings, and deletion revokes its credentials so requests using them fail authentication
+    ```
+
+- [ ] **FR-28**
+
+    ```gherkin
+    @FR-28
+    Scenario: list command output formats
+      Given a list command over at least two elements
+      When the user runs it with each of --output json, yaml, table, and name
+      Then json and yaml are valid parseable documents of the same data, table is the default rendering, and name prints exactly one element name per line with no other text
     ```
 
 - [ ] **NFR-1**
